@@ -31,8 +31,10 @@ def count_tokens(entries: list[dict], *names: str) -> int:
 def patch_fixes_test(patch: str) -> str:
     """Apply the agent's patch to a fresh copy of the repo and run the failing test."""
     reset_sample_repo()
-    applied = subprocess.run(["patch", "-p1", "--forward"], input=patch, cwd=REPO_DIR,
-                             capture_output=True, text=True)
+    # --batch: when the diff's paths don't match -p1, patch otherwise prompts
+    # "File to patch:" on /dev/tty (not stdin) and waits forever.
+    applied = subprocess.run(["patch", "-p1", "--forward", "--batch"], input=patch, cwd=REPO_DIR,
+                             capture_output=True, text=True, timeout=60)
     if applied.returncode != 0:
         return "patch did not apply"
     passed = run_ungated_command(f"pytest -q {FAILING_TEST}").startswith("exit code 0")
